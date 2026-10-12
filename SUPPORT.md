@@ -14,6 +14,80 @@ Before posting:
 3. remove private window titles, account names, document names, and paths from
    screenshots or logs.
 
+## Troubleshoot a missing Windows py launcher
+
+The contributor and development setup begins with `py -m venv .venv` (see
+[CONTRIBUTING.md: Development setup](CONTRIBUTING.md#development-setup)). If your
+Windows environment does not recognize the `py` command, use this recipe to
+diagnose the cause and create the project virtual environment without changing
+system security settings.
+
+### Distinguish the cause
+
+Before troubleshooting, confirm which condition you are encountering:
+
+- **Missing `py` launcher command:**
+  In PowerShell, running `py` fails with:
+  ```text
+  py : The term 'py' is not recognized as the name of a cmdlet, function, script file, or operable program.
+  ```
+  In Command Prompt (`cmd.exe`), running `py` fails with:
+  ```text
+  'py' is not recognized as an internal or external command, operable program or batch file.
+  ```
+  This indicates that the Python launcher for Windows (`py.exe`) is not installed or not on `PATH`.
+- **Unsupported Python version or architecture:**
+  The command runs, but `python --version` reports an unsupported version (older than Python 3.11), or a 32-bit (`x86`) build. Local Time Tracker requires 64-bit Windows with Python 3.11 or later (see [README.md: Requirements](README.md#requirements)). Verify your Python interpreter with:
+  ```powershell
+  python -c "import sys; print(sys.version); print('64-bit' if sys.maxsize > 2**32 else '32-bit')"
+  ```
+- **Missing project virtual environment:**
+  Running commands like `.\.venv\Scripts\python.exe` fails with path-not-found errors if `.venv` has not been created yet. The virtual environment must be created once before invoking its interpreter.
+
+### Create the project virtual environment with an existing Python executable
+
+If a supported 64-bit Python 3.11+ interpreter is already installed on your machine, you can create `.venv` directly without the `py` launcher:
+
+1. Locate an existing Python executable:
+   ```powershell
+   # Search PATH in PowerShell:
+   (Get-Command python).Source
+   ```
+   Common Windows installation locations include:
+   - Per-user: `C:\Users\<username>\AppData\Local\Programs\Python\Python312\python.exe`
+   - System-wide: `C:\Program Files\Python312\python.exe`
+
+2. Confirm the executable meets the 64-bit Python 3.11+ requirement:
+   ```powershell
+   & "C:\Program Files\Python312\python.exe" -c "import sys; print(sys.version); print('64-bit' if sys.maxsize > 2**32 else '32-bit')"
+   ```
+
+3. Create the project `.venv` using the verified executable path. When the path contains spaces, enclose it in quotes:
+   - In **PowerShell**, use the call operator `&` before the quoted path:
+     ```powershell
+     & "C:\Program Files\Python312\python.exe" -m venv .venv
+     ```
+   - In **Command Prompt** (`cmd.exe`), invoke the quoted path directly:
+     ```cmd
+     "C:\Program Files\Python312\python.exe" -m venv .venv
+     ```
+
+4. Run all subsequent setup and workflow commands using that virtual environment's interpreter directly:
+   ```powershell
+   .\.venv\Scripts\python.exe -m pip install --upgrade pip
+   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+   .\.venv\Scripts\python.exe -m unittest discover -v
+   .\.venv\Scripts\python.exe windows_app.py
+   ```
+
+### Security and installation guidance
+
+- **Do not weaken PowerShell protections:** Calling the virtual environment interpreter `.\.venv\Scripts\python.exe` directly avoids script execution, so you do not need to run `Set-ExecutionPolicy` or disable PowerShell execution policies.
+- **Do not use blanket administrator elevation:** Creating virtual environments and running development commands should be performed in a standard user shell without Administrator privileges.
+- **Do not install project dependencies globally:** Always install requirements into the project's `.venv` using `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`, rather than into your base Python installation.
+- **Official installer guidance:** If no supported 64-bit Python is installed, download an official installer from [Python Releases for Windows](https://www.python.org/downloads/windows/). During installation, select **Add python.exe to PATH** and ensure **Install launcher for all users** (or **Use admin privileges when installing py.exe**) is enabled so that the `py` launcher is available for future use. For more details, consult the [Python Docs: Using Python on Windows](https://docs.python.org/3/using/windows.html).
+
+
 ## Bug reports
 
 Use the
